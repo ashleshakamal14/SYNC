@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+:root {
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --bg-wellness: #FDFBF7;
+  --card-wellness: #FFFFFF;
+  --primary-pink: #E91E8C;
+  --primary-rose: #FB7185;
+  --primary-purple: #9C27B0;
+  --secondary-purple: #A855F7;
+  --sage-green: #10B981;
+  --warm-amber: #F59E0B;
+}
+
+body {
+  background-color: var(--bg-wellness);
+  color: #1F2937;
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom Wellness Glows and Card Styles */
+.wellness-card {
+  background: #ffffff;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(244, 114, 182, 0.15);
+  box-shadow: 0 10px 30px -10px rgba(236, 72, 153, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.wellness-card:hover {
+  box-shadow: 0 15px 35px -10px rgba(236, 72, 153, 0.14), 0 6px 12px -2px rgba(0, 0, 0, 0.03);
+}
+
+.wellness-gradient-hero {
+  background: linear-gradient(135deg, #FFF1F2 0%, #FDF2F8 50%, #FAF5FF 100%);
+}
+
+.wellness-gradient-btn {
+  background: linear-gradient(135deg, #EC4899 0%, #D946EF 100%);
+  color: #ffffff;
+  transition: all 0.2s ease-in-out;
+}
+
+.wellness-gradient-btn:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px -4px rgba(236, 72, 153, 0.4);
+}
+
+.wellness-gradient-btn:active {
+  transform: translateY(0px);
+}
+
+.badge-phase-menstrual {
+  background-color: #FCE7F3;
+  color: #BE185D;
+  border: 1px solid #FBCFE8;
+}
+
+.badge-phase-follicular {
+  background-color: #ECFDF5;
+  color: #047857;
+  border: 1px solid #A7F3D0;
+}
+
+.badge-phase-ovulation {
+  background-color: #FEF3C7;
+  color: #B45309;
+  border: 1px solid #FDE68A;
+}
+
+.badge-phase-luteal {
+  background-color: #F3E8FF;
+  color: #6B21A8;
+  border: 1px solid #E9D5FF;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #FDFBF7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FBCFE8;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #F472B6;
+}
