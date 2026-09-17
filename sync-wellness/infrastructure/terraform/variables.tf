@@ -35,7 +35,8 @@ variable "db_name" {
 }
 
 variable "ec2_instance_type" {
-  description = "EC2 instance type for application services"
+  description = "EC2 instance type for application services (t2.micro is AWS Free Tier eligible)"
   type        = string
-  default     = "t3.medium"
+  default     = "t2.micro"
 }
+

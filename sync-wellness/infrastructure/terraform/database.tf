@@ -36,9 +36,11 @@ resource "aws_db_instance" "sync_postgres" {
   identifier             = "sync-postgres-db"
   engine                 = "postgres"
   engine_version         = "15.7"
-  instance_class         = "db.t4g.micro"
-  allocated_storage      = 20
-  max_allocated_storage  = 100
+  instance_class         = "db.t3.micro" # AWS Free Tier eligible (750 hours/month)
+  allocated_storage      = 20            # AWS Free Tier maximum (20 GB)
+  storage_type           = "gp2"         # AWS Free Tier General Purpose SSD
+  multi_az               = false         # Single-AZ for Free Tier
+  backup_retention_period = 1
   db_name                = var.db_name
   username               = var.db_username
   password               = var.db_password
@@ -51,3 +53,4 @@ resource "aws_db_instance" "sync_postgres" {
     Name = "sync-postgres-rds"
   }
 }
+
