@@ -127,7 +127,7 @@ class GeminiService:
 
             # Generate via Gemini 2.5 Flash / 1.5 Flash
             response = client.models.generate_content(
-                model="gemini-2.5-flash",
+                model="gemini-3.5-flash-lite",
                 contents=full_prompt,
                 config={
                     "system_instruction": WELLNESS_SYSTEM_INSTRUCTION,
