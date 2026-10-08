@@ -837,3 +837,138 @@ def get_phase_guide(
         phase,
         PHASE_GUIDE["follicular"]
     )
+
+
+# ============================================================
+# COMPREHENSIVE CYCLE STATS & FALLBACK PREDICTION
+# ============================================================
+
+def calculate_cycle_history_stats(
+    cycle_history: List[dict]
+) -> dict:
+    """
+    Calculate comprehensive historical statistics from user's logged cycles.
+    """
+    if not cycle_history:
+        return {
+            "total_cycles": 0,
+            "average_cycle_length": None,
+            "average_period_length": None,
+            "shortest_cycle": None,
+            "longest_cycle": None,
+            "cycle_variability": None,
+            "is_regular": True,
+            "observation": "Log at least two cycle records to analyze historical patterns."
+        }
+
+    cycle_lengths = [
+        int(c["cycle_length"])
+        for c in cycle_history
+        if c.get("cycle_length") is not None
+    ]
+    period_lengths = [
+        int(c["period_length"])
+        for c in cycle_history
+        if c.get("period_length") is not None
+    ]
+
+    total = len(cycle_history)
+    avg_cycle = round(statistics.mean(cycle_lengths), 1) if cycle_lengths else 28.0
+    avg_period = round(statistics.mean(period_lengths), 1) if period_lengths else 5.0
+    shortest = min(cycle_lengths) if cycle_lengths else None
+    longest = max(cycle_lengths) if cycle_lengths else None
+    variability = round(statistics.stdev(cycle_lengths), 1) if len(cycle_lengths) > 1 else 0.0
+
+    irregularity = analyze_cycle_irregularity(cycle_history)
+
+    return {
+        "total_cycles": total,
+        "average_cycle_length": avg_cycle,
+        "average_period_length": avg_period,
+        "shortest_cycle": shortest,
+        "longest_cycle": longest,
+        "cycle_variability": variability,
+        "is_regular": irregularity.get("is_regular", True),
+        "observation": irregularity.get("observation", "Your cycle lengths appear regular.")
+    }
+
+
+def predict_next_cycle_with_fallback(
+    cycle_history: List[dict],
+    user_profile: Optional[dict] = None,
+) -> dict:
+    """
+    Predict next cycle date and length using trained ML model if available,
+    falling back to historical average or baseline.
+    """
+    disclaimer = (
+        "Cycle predictions are estimates based on your logged patterns. "
+        "They are general wellness guidance and not medical certainty or guarantees of fertility."
+    )
+
+    if not cycle_history:
+        today = date.today()
+        metrics = calculate_cycle_metrics(today, 28, 5)
+        return {
+            "predicted_next_period": metrics["predicted_next_cycle"],
+            "predicted_cycle_length": 28,
+            "confidence": "standard_estimate",
+            "method": "default_baseline",
+            "ovulation_date": metrics["ovulation_date"],
+            "fertile_window_start": metrics["fertile_window_start"],
+            "fertile_window_end": metrics["fertile_window_end"],
+            "current_phase": metrics["current_phase"],
+            "cycle_day": metrics["cycle_day"],
+            "days_until_next_period": metrics["days_until_next_period"],
+            "disclaimer": disclaimer,
+        }
+
+    # Latest logged cycle
+    latest = cycle_history[-1]
+    latest_start = latest.get("period_start")
+    if isinstance(latest_start, str):
+        latest_start = date.fromisoformat(latest_start)
+    elif not isinstance(latest_start, date):
+        latest_start = date.today()
+
+    period_length = latest.get("period_length", 5) or 5
+
+    # Attempt ML Prediction
+    ml_prediction = predict_next_cycle_ml(cycle_history, user_profile=user_profile)
+
+    if ml_prediction is not None:
+        predicted_length = ml_prediction
+        method = "ml"
+        confidence = "high" if len(cycle_history) >= 3 else "moderate"
+    else:
+        # Fallback to historical average
+        valid_lengths = [
+            c.get("cycle_length")
+            for c in cycle_history
+            if c.get("cycle_length") is not None
+        ]
+        if valid_lengths:
+            predicted_length = round(statistics.mean(valid_lengths))
+            predicted_length = max(21, min(35, predicted_length))
+            method = "historical_average"
+            confidence = "moderate"
+        else:
+            predicted_length = latest.get("cycle_length", 28) or 28
+            method = "default_baseline"
+            confidence = "standard_estimate"
+
+    metrics = calculate_cycle_metrics(latest_start, predicted_length, period_length)
+
+    return {
+        "predicted_next_period": metrics["predicted_next_cycle"],
+        "predicted_cycle_length": predicted_length,
+        "confidence": confidence,
+        "method": method,
+        "ovulation_date": metrics["ovulation_date"],
+        "fertile_window_start": metrics["fertile_window_start"],
+        "fertile_window_end": metrics["fertile_window_end"],
+        "current_phase": metrics["current_phase"],
+        "cycle_day": metrics["cycle_day"],
+        "days_until_next_period": metrics["days_until_next_period"],
+        "disclaimer": disclaimer,
+    }

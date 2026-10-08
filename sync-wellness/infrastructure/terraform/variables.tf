@@ -17,19 +17,19 @@ variable "vpc_cidr" {
 }
 
 variable "db_username" {
-  description = "PostgreSQL administrator username"
+  description = "MySQL administrator username"
   type        = string
   default     = "syncadmin"
 }
 
 variable "db_password" {
-  description = "PostgreSQL administrator password"
+  description = "MySQL administrator password"
   type        = string
   sensitive   = true
 }
 
 variable "db_name" {
-  description = "PostgreSQL database name"
+  description = "MySQL database name"
   type        = string
   default     = "syncdb"
 }

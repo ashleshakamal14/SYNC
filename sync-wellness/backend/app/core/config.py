@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Database
-    DATABASE_URL: str = "postgresql://syncuser:syncpassword@localhost:5432/syncdb"
+    DATABASE_URL: str = "mysql+pymysql://root:password@localhost:3306/syncdb"
 
     # JWT
     JWT_SECRET: str = "change-this-secret-in-production"

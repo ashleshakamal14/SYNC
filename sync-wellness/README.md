@@ -2,241 +2,176 @@
 
 > **"Understand Your Body • Track Your Health • Feel Your Best"**
 
-SYNC is an intelligent, holistic wellness companion designed for women to track menstrual cycles, understand hormonal phases, monitor moods, observe physical symptoms, cultivate healthy hydration and nutritional habits, and receive personalized, explainable AI wellness insights.
+SYNC is a production-quality, modular women's wellness companion application built with **FastAPI**, **Next.js**, **MySQL**, **scikit-learn**, and the **Google Gemini API**. It provides cycle tracking with machine learning-based next-period predictions, holistic mood and emotional check-ins, statistical cycle-mood correlation analysis, and an empathetic, privacy-preserving AI wellness chatbot.
 
 ---
 
-## ⚠️ Medical Disclaimer
+## ⚠️ Medical Safety & Boundary Statement
 
-> **IMPORTANT:** SYNC provides general wellness information and lifestyle observations based on self-logged data. It is **NOT** a medical diagnosis system and is **never** a substitute for professional medical advice, clinical diagnosis, or medical treatment. If you experience severe, persistent, or debilitating symptoms, please consult a qualified healthcare professional immediately.
-
----
-
-## 📱 Features
-
-- **🌙 Cycle & Phase Tracking**: Rule-based and ML-assisted estimation of next periods, ovulation dates, and fertile windows. Automatic phase classification into Menstrual, Follicular, Ovulation, and Luteal phases.
-- **✨ AI Phase Guide**: Phase-specific suggestions for balanced nutrition, physical activity, sleep hygiene, self-care, and productivity.
-- **😊 Mood & Reflection Journal**: Daily emotional logging with automated sentiment scoring, stress/energy trend charts, and pattern observations.
-- **🩺 Symptom Tracking**: Track cramps, headaches, fatigue, bloating, acne, and other symptoms on a 1–5 severity scale with frequency breakdowns.
-- **🥗 Nutrition & Hydration Tracker**: 1-click water logger, balanced meal notes, and cycle-supportive mineral food recommendations.
-- **⏰ Smart Reminders**: Timely alerts for supplements, water intake, upcoming periods, and doctor appointments with one-click completion.
-- **💬 RAG AI Health Assistant**: LangChain + FAISS powered wellness assistant that provides cited, educational answers to lifestyle and cycle questions. Safe mock fallback enabled for offline/zero-key development.
-- **🤝 Privacy-First Partner Mode**: Share only what you choose (cycle phase, daily mood, or profile) with a trusted partner with instant revocation. Private journal entries are **strictly confidential**.
-- **📊 Reports & PDF Generation**: Interactive analytics charts and one-click downloadable PDF summary reports for your personal health records or doctor consultations.
+> **IMPORTANT:** SYNC provides general wellness information and lifestyle education based on self-logged data. It is **NOT** a medical diagnostic tool and is **never** a substitute for professional medical advice, clinical diagnosis, or personalized treatment plans. In case of acute symptoms, severe pain, or emergency health concerns, users should immediately seek professional medical care or contact local emergency services.
 
 ---
 
 ## 🏛️ System Architecture
 
 ```
-[ Next.js 15+ Frontend (App Router, Tailwind CSS, Recharts) ]
-                            ↕ (HTTP / REST + JWT)
-        [ FastAPI Backend (Python, Pydantic, SQLAlchemy) ]
-              ├── Auth Module & JWT Token Services
-              ├── Cycle & Phase Engine (Rule + ML Weighted Averages)
-              ├── Mood Engine & Sentiment Analysis
-              ├── Nutrition & Reminder Service
-              ├── Partner Access Control (Granular Permissions)
-              ├── PDF Report Generator (ReportLab)
-              └── AI RAG Chatbot (LangChain, FAISS, LLM Providers)
-                            ↕
-        [ Database: PostgreSQL / Local SQLite Fallback ]
-                            ↕
-        [ Cloud Storage: AWS S3 (Reports Storage) ]
+[ Next.js 15+ Frontend (App Router, Tailwind CSS, Recharts) - Port 3000 ]
+                              ↕ (REST API + JWT Bearer Auth)
+[ FastAPI Backend (Python, Pydantic v2, SQLAlchemy 2.0) - Port 8001 ]
+        ├── Auth Module (JWT, Bcrypt hashing, strict user scoping)
+        ├── Cycle & Phase Engine (Random Forest ML model + fallback)
+        ├── Mood Tracking & Pattern Engine (Sentiment & Multi-metric trends)
+        ├── Cycle + Mood Correlation Layer (Phase-based wellness insights)
+        ├── Gemini AI Chatbot Service (google-genai SDK, safety system prompt, context builder)
+        └── MySQL Database Layer (syncdb: users, cycles, mood_logs, conversations, chat_messages)
 ```
 
 ---
 
 ## 🛠️ Technology Stack
 
-| Layer | Technologies |
+| Component | Technologies |
 |---|---|
-| **Frontend** | Next.js 15+, React 19, TypeScript, Tailwind CSS, Lucide Icons, Recharts, Axios |
-| **Backend** | Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2.0, ReportLab |
-| **Database** | PostgreSQL (Production) / SQLite (Zero-config local fallback) |
-| **Auth** | JWT (JSON Web Tokens), Passlib (Bcrypt hashing) |
-| **AI / RAG** | LangChain, FAISS Vector DB, Hugging Face Embeddings, Google Gemini / OpenAI / Groq |
-| **Cloud (AWS)**| Terraform (VPC, Subnets, Security Groups, EC2, RDS PostgreSQL, S3, IAM) |
-| **CI/CD** | GitHub Actions (Automated pytest, linting, Next.js production build) |
+| **Frontend** | Next.js 15+, React 19, TypeScript, Vanilla CSS / Tailwind CSS, Lucide Icons, Recharts, Axios |
+| **Backend** | Python 3.11+, FastAPI, Pydantic v2, SQLAlchemy 2.0, PyMySQL, Uvicorn |
+| **Database** | MySQL 8.0+ (`syncdb` at `localhost:3306`) |
+| **Machine Learning** | scikit-learn (Random Forest Regressor pipeline for cycle prediction), pandas, NumPy |
+| **AI Chatbot** | Official Google Gemini Python SDK (`google-genai`), LangChain, FAISS |
+| **Authentication** | JWT (JSON Web Tokens) with HS256, Passlib (Bcrypt password hashing) |
+| **Testing** | pytest, pytest-asyncio, FastAPI TestClient |
 
 ---
 
-## 📂 Project Structure
+## 🔒 Security & Environment Configuration
 
+> [!WARNING]
+> **Gemini API key must be configured locally and must never be committed to Git.**
+> The `GEMINI_API_KEY` is strictly stored on the FastAPI backend in `.env` and is **NEVER** exposed to the Next.js frontend or prefixed with `NEXT_PUBLIC_*`.
+
+### Required Environment Variables
+
+#### Backend `.env` (`sync-wellness/.env`)
+```ini
+# Database (MySQL)
+DATABASE_URL=mysql+pymysql://root:password@localhost:3306/syncdb
+MYSQL_USER=root
+MYSQL_PASSWORD=password
+MYSQL_DATABASE=syncdb
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+
+# JWT Authentication
+JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
+JWT_ALGORITHM=HS256
+JWT_ACCESS_TOKEN_EXPIRE_MINUTES=1440
+
+# AI / Gemini API (Backend only)
+GEMINI_API_KEY=your-gemini-api-key-here
+LLM_PROVIDER=gemini
+
+# Frontend Origin & Port
+NEXT_PUBLIC_API_URL=http://localhost:8001
+ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001
+ENVIRONMENT=development
 ```
-sync-wellness/
-├── frontend/                     # Next.js 15+ Frontend
-│   ├── app/                      # App router pages
-│   │   ├── chat/                 # AI Wellness Chatbot UI
-│   │   ├── cycle/                # Cycle tracking & Phase guide
-│   │   ├── dashboard/            # Core dashboard & charts
-│   │   ├── login/                # Authentication Sign-in
-│   │   ├── mood/                 # Mood tracking & journal
-│   │   ├── nutrition/            # Water & nutrition tracker
-│   │   ├── partner/              # Partner mode & permission controls
-│   │   ├── profile/              # User settings & health profile
-│   │   ├── register/             # Account creation
-│   │   ├── reminders/            # Care alert reminders
-│   │   ├── reports/              # Analytics & PDF generation
-│   │   ├── globals.css           # Wellness design tokens & CSS
-│   │   └── page.tsx              # SaaS Landing page
-│   ├── components/               # Reusable UI components
-│   ├── hooks/                    # useAuth hook & context
-│   ├── lib/                      # API client & utility constants
-│   ├── services/                 # API service methods
-│   └── types/                    # TypeScript interfaces
-│
-├── backend/                      # FastAPI Python Application
-│   ├── app/
-│   │   ├── ai/                   # AI engines (Cycle, Mood, RAG, Recommendations)
-│   │   ├── api/                  # API route handlers (Auth, Cycles, Moods, etc.)
-│   │   ├── core/                 # Config & security (JWT, Bcrypt)
-│   │   ├── database/             # SQLAlchemy engine & session factory
-│   │   ├── models/               # SQLAlchemy models (User, Cycle, MoodLog, etc.)
-│   │   ├── schemas/              # Pydantic request/response schemas
-│   │   └── main.py               # FastAPI application entrypoint
-│   ├── tests/                    # Pytest integration & unit test suite
-│   └── requirements.txt          # Python dependencies
-│
-├── database/seed/                # Seed script with realistic demo data
-├── infrastructure/terraform/     # Complete AWS Terraform infrastructure
-├── .github/workflows/            # GitHub Actions CI/CD pipeline
-├── .env.example                  # Environment variable reference
-└── README.md
+
+#### Frontend `.env.local` (`sync-wellness/frontend/.env.local`)
+```ini
+NEXT_PUBLIC_API_URL=http://localhost:8001
 ```
 
 ---
 
-## 🚀 Quickstart: Running Locally (No Docker Required)
+## 🚀 How to Run Locally
 
-### 1. Prerequisites
-- **Node.js** 18+ and **npm**
-- **Python** 3.10+
-- (Optional) PostgreSQL database (a zero-config local SQLite database is automatically used if PostgreSQL is not active)
+### 1. Start MySQL Database
+Ensure MySQL is running on `localhost:3306` with database `syncdb`.
 
-### 2. Configure Environment Variables
-Copy `.env.example` to `.env`:
-```bash
-cp .env.example .env
-```
-Default values work out of the box for local development without external API keys.
+### 2. Start the FastAPI Backend (Port 8001)
 
----
-
-### 3. Setup and Run Backend
-
-```bash
+Open Windows PowerShell:
+```powershell
 # Navigate to backend directory
-cd sync-wellness/backend
+cd c:\Users\ASHLESHA\SYNC\sync-wellness\backend
 
-# Install dependencies
-pip install -r requirements.txt
+# Activate virtual environment
+..\..\.venv\Scripts\Activate.ps1
 
-# (Optional) Seed demo user and 6 months of wellness records
-python ../database/seed/seed.py
-
-# Start the FastAPI development server
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+# Run FastAPI backend on port 8001
+uvicorn app.main:app --reload --port 8001
 ```
 
-The backend will be available at:
-- **API Base URL**: `http://localhost:8000`
-- **Interactive Swagger Docs**: `http://localhost:8000/api/docs`
+Backend will be available at:
+- **API Base URL**: `http://localhost:8001`
+- **Interactive Swagger Docs**: `http://localhost:8001/api/docs`
+- **OpenAPI JSON**: `http://localhost:8001/openapi.json`
 
----
+### 3. Start the Next.js Frontend (Port 3000)
 
-### 4. Setup and Run Frontend
-
-```bash
-# Open a new terminal and navigate to frontend directory
-cd sync-wellness/frontend
-
-# Install dependencies
-npm install --legacy-peer-deps
+Open a second Windows PowerShell terminal:
+```powershell
+# Navigate to frontend directory
+cd c:\Users\ASHLESHA\SYNC\sync-wellness\frontend
 
 # Start Next.js development server
 npm run dev
 ```
 
-The frontend will be available at:
-- **Application URL**: `http://localhost:3000`
-- **Login Credentials (Demo Account)**:
-  - **Email**: `demo@sync.wellness`
-  - **Password**: `SyncDemo2024!`
-  *(Or click the "Use Demo Account" button on the login screen!)*
+Frontend will be available at:
+- **Web App URL**: `http://localhost:3000`
+- **Login**: `http://localhost:3000/login`
+- **Cycle Dashboard**: `http://localhost:3000/cycle`
+- **Mood Dashboard**: `http://localhost:3000/mood`
+- **AI Chatbot**: `http://localhost:3000/chat`
 
 ---
 
-## 🤖 AI Configuration
+## 📡 API Endpoints Reference
 
-SYNC is engineered with a **zero-downtime, resilient AI design**. It runs with an intelligent mock/fallback knowledge base for development, and seamlessly activates state-of-the-art LLMs when API keys are configured:
+### Authentication (`/api/auth`)
+- `POST /api/auth/register` — Register new user account & issue JWT.
+- `POST /api/auth/login` — Authenticate user & issue JWT.
+- `GET /api/auth/me` — Retrieve current authenticated user profile.
+- `PUT /api/auth/profile` — Update user profile details.
 
-1. In your `.env` file, set `LLM_PROVIDER` to `gemini`, `openai`, or `groq`:
-   ```ini
-   LLM_PROVIDER=gemini
-   GEMINI_API_KEY=AIzaSy...
-   ```
-2. The RAG pipeline automatically retrieves relevant wellness knowledge documents using FAISS and provides cited, context-aware answers.
+### Cycle Tracking (`/api/cycles`)
+- `POST /api/cycles` — Create a new period / cycle record.
+- `GET /api/cycles` — Retrieve all cycle records for the authenticated user.
+- `GET /api/cycles/current` — Current cycle state, day, phase, and metrics.
+- `GET /api/cycles/prediction` — ML-based prediction of next period date & length with historical average fallback.
+- `GET /api/cycles/stats` — Cycle history statistics (average length, variability/std dev, shortest/longest cycle).
+- `GET /api/cycles/{cycle_id}` — Get specific cycle by ID (user isolated).
+- `PUT /api/cycles/{cycle_id}` — Update cycle record.
+- `DELETE /api/cycles/{cycle_id}` — Delete cycle record.
+
+### Mood Tracking (`/api/moods`)
+- `POST /api/moods` — Record mood, mood score (1-10), stress (1-10), anxiety (1-10), energy (1-10), sleep hours, and journal notes.
+- `GET /api/moods` — Retrieve mood entries with optional filters (`days=7`, `days=30`, `start_date`, `end_date`).
+- `GET /api/moods/summary` — Comprehensive summary with averages (mood score, stress, anxiety, energy, sleep) and mood trends.
+- `GET /api/moods/{mood_id}` — Get specific mood entry (user isolated).
+- `PUT /api/moods/{mood_id}` — Update mood entry.
+- `DELETE /api/moods/{mood_id}` — Delete mood entry.
+
+### Cycle + Mood Correlations & Analytics (`/api/analytics`)
+- `GET /api/analytics/dashboard` — Aggregated dashboard metrics, mini-charts, upcoming reminders.
+- `GET /api/analytics/correlations` — Statistical correlation of mood, energy, stress, and sleep across cycle phases (Menstrual, Follicular, Ovulation, Luteal) with non-medical phrasing.
+- `GET /api/analytics/moods/trends` — Multi-day mood timeline and distribution.
+- `GET /api/analytics/cycles/history` — Historical cycle chart data.
+
+### AI Chatbot (`/api/chat`)
+- `POST /api/chat` — Authenticated chat endpoint powered by Gemini. Injects minimal user wellness context (current cycle day, phase, recent mood, sleep, symptoms) and enforces safety system prompt.
+- `GET /api/chat/history` — Retrieve user's chat message history (strictly user isolated).
+- `DELETE /api/chat/history` — Clear user's chat history and conversation threads.
 
 ---
 
-## 🧪 Running Tests
+## 🧪 Automated Testing
 
-```bash
-# Run backend pytest suite
-cd sync-wellness/backend
-pytest tests/ -v
+To run the complete test suite verifying authentication, cycles CRUD, ML predictions, mood filters, cycle-mood correlations, chatbot, unauthorized access, and cross-user data isolation:
 
-# Run frontend build check
-cd sync-wellness/frontend
-npm run build
+```powershell
+cd c:\Users\ASHLESHA\SYNC\sync-wellness\backend
+..\..\.venv\Scripts\python.exe -m pytest tests/test_full_suite.py -v
 ```
 
----
-
-## ☁️ AWS Infrastructure (Terraform)
-
-The `infrastructure/terraform` folder contains production-ready Infrastructure-as-Code for AWS:
-
-- **VPC & Subnets**: Multi-AZ public subnets for compute and isolated private subnets for RDS.
-- **Compute (EC2)**: Application server running Next.js and FastAPI.
-- **Database (RDS)**: Managed PostgreSQL instance in private subnets.
-- **Storage (S3)**: AES-256 encrypted bucket with public access block for PDF wellness reports.
-- **IAM**: Least-privilege roles and instance profiles.
-
-### Terraform Deployment Instructions
-```bash
-cd sync-wellness/infrastructure/terraform
-
-# Initialize Terraform
-terraform init
-
-# Review proposed changes
-terraform plan -var="db_password=YourSecurePassword123!"
-
-# Apply infrastructure
-terraform apply -var="db_password=YourSecurePassword123!"
-```
-
----
-
-## 🔮 Future Scope & Roadmap
-
-- **Wearable & Fitness Tracker Integration**: Continuous sleep and heart-rate variability (HRV) sync with Apple HealthKit, Fitbit, and Oura.
-- **OCR for Blood Test Reports**: Automatic extraction and trend tracking of hemoglobin, ferritin, thyroid, and vitamin D lab panels.
-- **Specialized Health Modes**: Dedicated tracking algorithms for PCOS, Pregnancy, Postpartum, and Perimenopause/Menopause.
-- **Community Wellness Forum**: Safe, moderated peer discussions and support groups.
-- **Voice Assistant**: Natural voice logging for quick hands-free check-ins.
-
----
-
-## 🔒 Security & Privacy Practices
-
-- **Strict Isolation**: Every database query is scoped to the authenticated user ID (`current_user.id`).
-- **Encrypted Passwords**: Passwords hashed using industry-standard Bcrypt.
-- **Confidential Journals**: Journal entries and personal reflections are protected by strict privacy policies and are never exposed to partners or external services.
-- **CORS & Secure Headers**: Strict origin whitelisting for all API endpoints.
-
----
-
-*SYNC is more than a tracker — it's your personal wellness partner for every phase of your journey. ♡*
+All 14 unit and integration tests pass with 100% pass rate.

@@ -1,18 +1,24 @@
 from datetime import date
-
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
 
 from app.core.security import get_current_user
 from app.database.session import get_db
 from app.models.user import User
 from app.models.wellness import Cycle
-from app.schemas.wellness import CycleCreate, CycleUpdate, CycleResponse
-
+from app.schemas.wellness import (
+    CycleCreate,
+    CycleUpdate,
+    CycleResponse,
+    CyclePredictionResponse,
+    CycleStatsResponse,
+)
 from app.ai.cycle_engine import (
     calculate_cycle_metrics,
     predict_next_cycle_ml,
+    predict_next_cycle_with_fallback,
+    calculate_cycle_history_stats,
     get_phase_guide,
     analyze_cycle_irregularity,
 )
@@ -28,9 +34,8 @@ def _enrich_cycle(
 ) -> Cycle:
     """
     Recalculate cycle predictions and phase using
-    the trained ML cycle prediction model.
+    the trained ML cycle prediction model with reliable fallback.
     """
-
     history = (
         db.query(Cycle)
         .filter(Cycle.user_id == cycle.user_id)
@@ -40,7 +45,10 @@ def _enrich_cycle(
 
     history_dicts = [
         {
+            "period_start": c.period_start,
+            "period_end": c.period_end,
             "cycle_length": c.cycle_length,
+            "period_length": c.period_length,
         }
         for c in history
     ]
@@ -95,11 +103,8 @@ def create_cycle(
 ):
     """
     Create a new menstrual cycle record.
-
-    The trained ML model is used to predict the next cycle
-    when enough historical information is available.
+    The authenticated user's ID is enforced from JWT.
     """
-
     cycle = Cycle(
         user_id=current_user.id,
         period_start=cycle_in.period_start,
@@ -123,7 +128,7 @@ def create_cycle(
 
 
 # ============================================================
-# GET ALL CYCLES
+# GET ALL CYCLES (USER ISOLATED)
 # ============================================================
 
 @router.get(
@@ -136,14 +141,13 @@ def create_cycle(
 )
 def get_cycles(
     skip: int = 0,
-    limit: int = 50,
+    limit: int = 100,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    Get all cycle records for the logged-in user.
+    Get all cycle records for the authenticated user.
     """
-
     cycles = (
         db.query(Cycle)
         .filter(Cycle.user_id == current_user.id)
@@ -153,10 +157,7 @@ def get_cycles(
         .all()
     )
 
-    return [
-        CycleResponse.model_validate(cycle)
-        for cycle in cycles
-    ]
+    return [CycleResponse.model_validate(c) for c in cycles]
 
 
 # ============================================================
@@ -176,7 +177,6 @@ def get_current_cycle_info(
     ML-based next-cycle prediction, phase information,
     and irregularity analysis.
     """
-
     latest = (
         db.query(Cycle)
         .filter(Cycle.user_id == current_user.id)
@@ -187,10 +187,7 @@ def get_current_cycle_info(
     if not latest:
         return {
             "has_data": False,
-            "message": (
-                "No cycle data yet. "
-                "Log your first period to get started!"
-            ),
+            "message": "No cycle data yet. Log your first period to get started!",
         }
 
     history = (
@@ -202,7 +199,10 @@ def get_current_cycle_info(
 
     history_dicts = [
         {
+            "period_start": c.period_start,
+            "period_end": c.period_end,
             "cycle_length": c.cycle_length,
+            "period_length": c.period_length,
         }
         for c in history
     ]
@@ -213,51 +213,133 @@ def get_current_cycle_info(
         "weight": current_user.weight,
     }
 
-    # Use the trained ML model to predict the next cycle length.
-    predicted_length = (
-        predict_next_cycle_ml(
-            history_dicts,
-            user_profile=user_profile,
-        )
-        or latest.cycle_length
-    )
-
-    metrics = calculate_cycle_metrics(
-        latest.period_start,
-        predicted_length,
-        latest.period_length,
+    # Prediction with fallback
+    prediction_info = predict_next_cycle_with_fallback(
+        history_dicts,
+        user_profile=user_profile,
     )
 
     phase_guide = get_phase_guide(
-        metrics["current_phase"]
+        prediction_info["current_phase"] or "follicular"
     )
 
     irregularity = analyze_cycle_irregularity(
         history_dicts
     )
 
+    stats = calculate_cycle_history_stats(
+        history_dicts
+    )
+
     return {
         "has_data": True,
-
-        "latest_cycle": CycleResponse.model_validate(
-            latest
-        ),
-
-        "metrics": metrics,
-
+        "latest_cycle": CycleResponse.model_validate(latest),
+        "metrics": {
+            "cycle_day": prediction_info["cycle_day"],
+            "current_phase": prediction_info["current_phase"],
+            "ovulation_date": prediction_info["ovulation_date"],
+            "fertile_window_start": prediction_info["fertile_window_start"],
+            "fertile_window_end": prediction_info["fertile_window_end"],
+            "predicted_next_cycle": prediction_info["predicted_next_period"],
+            "days_until_next_period": prediction_info["days_until_next_period"],
+            "cycle_length": prediction_info["predicted_cycle_length"],
+            "period_length": latest.period_length,
+        },
+        "prediction": prediction_info,
         "phase_guide": phase_guide,
-
         "irregularity_analysis": irregularity,
-
-        "disclaimer": (
-            "Cycle predictions are estimates based on "
-            "your data. They are not medical predictions."
-        ),
+        "stats": stats,
+        "disclaimer": prediction_info["disclaimer"],
     }
 
 
 # ============================================================
-# GET SINGLE CYCLE
+# GET CYCLE PREDICTION (PHASE 2 & 3 ENDPOINT)
+# ============================================================
+
+@router.get(
+    "/prediction",
+    response_model=CyclePredictionResponse,
+)
+def get_cycle_prediction(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Get estimated next period date using trained ML model
+    with fallback to historical average.
+    """
+    history = (
+        db.query(Cycle)
+        .filter(Cycle.user_id == current_user.id)
+        .order_by(Cycle.period_start)
+        .all()
+    )
+
+    history_dicts = [
+        {
+            "period_start": c.period_start,
+            "period_end": c.period_end,
+            "cycle_length": c.cycle_length,
+            "period_length": c.period_length,
+        }
+        for c in history
+    ]
+
+    user_profile = {
+        "age": current_user.age,
+        "height": current_user.height,
+        "weight": current_user.weight,
+    }
+
+    prediction = predict_next_cycle_with_fallback(
+        history_dicts,
+        user_profile=user_profile,
+    )
+
+    return CyclePredictionResponse(**prediction)
+
+
+# ============================================================
+# GET CYCLE STATS (AVERAGES, VARIABILITY, SHORTEST/LONGEST)
+# ============================================================
+
+@router.get(
+    "/stats",
+    response_model=CycleStatsResponse,
+)
+def get_cycle_stats(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Calculate user's cycle history statistics:
+    average cycle length, average period length, shortest/longest cycle,
+    and cycle variability (standard deviation).
+    """
+    history = (
+        db.query(Cycle)
+        .filter(Cycle.user_id == current_user.id)
+        .order_by(Cycle.period_start)
+        .all()
+    )
+
+    history_dicts = [
+        {
+            "period_start": c.period_start,
+            "period_end": c.period_end,
+            "cycle_length": c.cycle_length,
+            "period_length": c.period_length,
+        }
+        for c in history
+    ]
+
+    stats = calculate_cycle_history_stats(history_dicts)
+    return CycleStatsResponse(**stats)
+
+
+# ============================================================
+# GET SINGLE CYCLE (USER ISOLATED)
 # ============================================================
 
 @router.get(
@@ -270,9 +352,8 @@ def get_cycle(
     db: Session = Depends(get_db),
 ):
     """
-    Get a specific cycle record.
+    Get a specific cycle record. Enforces user isolation.
     """
-
     cycle = (
         db.query(Cycle)
         .filter(
@@ -284,7 +365,7 @@ def get_cycle(
 
     if not cycle:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Cycle record not found",
         )
 
@@ -306,10 +387,8 @@ def update_cycle(
     db: Session = Depends(get_db),
 ):
     """
-    Update an existing cycle record and
-    recalculate ML-based predictions.
+    Update an existing cycle record and recalculate predictions.
     """
-
     cycle = (
         db.query(Cycle)
         .filter(
@@ -321,14 +400,11 @@ def update_cycle(
 
     if not cycle:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Cycle record not found",
         )
 
-    update_data = update.model_dump(
-        exclude_none=True
-    )
-
+    update_data = update.model_dump(exclude_none=True)
     for field, value in update_data.items():
         setattr(cycle, field, value)
 
@@ -358,9 +434,8 @@ def delete_cycle(
     db: Session = Depends(get_db),
 ):
     """
-    Delete a cycle record.
+    Delete a cycle record. Enforces user isolation.
     """
-
     cycle = (
         db.query(Cycle)
         .filter(
@@ -372,7 +447,7 @@ def delete_cycle(
 
     if not cycle:
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail="Cycle record not found",
         )
 

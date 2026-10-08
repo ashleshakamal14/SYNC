@@ -5,15 +5,41 @@ import time
 
 from app.core.config import settings
 from app.database.session import Base, engine
+from app.database.migrations import run_migrations
 
 # Import all models to ensure they're registered with SQLAlchemy
-from app.models import User, Cycle, MoodLog, Symptom, Nutrition, Partner, Reminder, ChatHistory, Report  # noqa
+from app.models import (  # noqa
+    User,
+    Cycle,
+    MoodLog,
+    MoodEntry,
+    Symptom,
+    Nutrition,
+    Partner,
+    Reminder,
+    ChatHistory,
+    Conversation,
+    ChatMessage,
+    Report,
+)
 
 # API Routers
-from app.api import auth, cycles, moods, symptoms, nutrition, reminders, chat, partners, analytics, ai_recommendations, reports
+from app.api import (
+    auth,
+    cycles,
+    moods,
+    symptoms,
+    nutrition,
+    reminders,
+    chat,
+    partners,
+    analytics,
+    ai_recommendations,
+    reports,
+)
 
-# Create tables (use Alembic in production)
-Base.metadata.create_all(bind=engine)
+# Run database schema migrations
+run_migrations()
 
 app = FastAPI(
     title="SYNC Wellness API",

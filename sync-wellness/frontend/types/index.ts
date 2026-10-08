@@ -32,7 +32,8 @@ export interface Cycle {
   fertile_window_start?: string
   fertile_window_end?: string
   notes?: string
-  created_at: string
+  created_at?: string
+  updated_at?: string
 }
 
 export type CyclePhase = 'menstrual' | 'follicular' | 'ovulation' | 'luteal'
@@ -47,6 +48,31 @@ export interface CycleMetrics {
   days_until_next_period: number
   cycle_length: number
   period_length: number
+}
+
+export interface CyclePrediction {
+  predicted_next_period?: string
+  predicted_cycle_length: number
+  confidence: string
+  method: string
+  ovulation_date?: string
+  fertile_window_start?: string
+  fertile_window_end?: string
+  current_phase?: string
+  cycle_day?: number
+  days_until_next_period?: number
+  disclaimer: string
+}
+
+export interface CycleStats {
+  total_cycles: number
+  average_cycle_length?: number
+  average_period_length?: number
+  shortest_cycle?: number
+  longest_cycle?: number
+  cycle_variability?: number
+  is_regular: boolean
+  observation: string
 }
 
 export interface PhaseGuide {
@@ -75,12 +101,59 @@ export interface MoodLog {
   id: number
   user_id: number
   date: string
-  mood: MoodType
+  mood: MoodType | string
+  mood_score?: number
   stress_level?: number
+  anxiety_level?: number
   energy_level?: number
+  sleep_hours?: number
+  notes?: string
   journal?: string
   sentiment_score?: number
-  created_at: string
+  created_at?: string
+  updated_at?: string
+}
+
+export interface MoodSummary {
+  has_data: boolean
+  total_entries: number
+  average_mood_score?: number
+  average_stress?: number
+  average_anxiety?: number
+  average_energy?: number
+  average_sleep?: number
+  dominant_mood?: string
+  mood_distribution: Record<string, number>
+  mood_trend: Array<{
+    date: string
+    mood: string
+    mood_score?: number
+    stress?: number
+    anxiety?: number
+    energy?: number
+    sleep?: number
+    sentiment?: number
+  }>
+  patterns: string[]
+  recent_entries: MoodLog[]
+}
+
+export interface CycleMoodCorrelation {
+  has_data: boolean
+  total_correlated_entries?: number
+  message?: string
+  phase_correlations: Record<
+    string,
+    {
+      entries_count: number
+      avg_mood_score?: number
+      avg_stress?: number
+      avg_energy?: number
+      avg_sleep?: number
+    }
+  >
+  insights: string[]
+  disclaimer?: string
 }
 
 export type SymptomType =
@@ -135,8 +208,11 @@ export interface Reminder {
 
 export interface ChatMessage {
   id: number
-  question: string
-  answer: string
+  message?: string
+  question?: string
+  response?: string
+  answer?: string
+  conversation_id?: number
   sources?: string[]
   timestamp: string
 }
@@ -182,8 +258,11 @@ export interface DashboardData {
   mood_chart: Array<{
     date: string
     mood: MoodType
+    mood_score?: number
     stress?: number
+    anxiety?: number
     energy?: number
+    sleep?: number
     sentiment?: number
   }>
   symptom_frequency: Record<string, number>

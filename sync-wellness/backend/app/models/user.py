@@ -29,4 +29,5 @@ class User(Base):
                             foreign_keys="Partner.user_id")
     reminders = relationship("Reminder", back_populates="user", cascade="all, delete-orphan")
     chat_history = relationship("ChatHistory", back_populates="user", cascade="all, delete-orphan")
+    conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
     reports = relationship("Report", back_populates="user", cascade="all, delete-orphan")

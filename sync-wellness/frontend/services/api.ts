@@ -1,5 +1,15 @@
 import api from '@/lib/api'
-import { Cycle, CycleMetrics, PhaseGuide } from '@/types'
+import {
+  Cycle,
+  CycleMetrics,
+  CyclePrediction,
+  CycleStats,
+  PhaseGuide,
+  MoodLog,
+  MoodSummary,
+  CycleMoodCorrelation,
+  ChatMessage,
+} from '@/types'
 
 export const cycleService = {
   async getAll(): Promise<Cycle[]> {
@@ -11,11 +21,23 @@ export const cycleService = {
     has_data: boolean
     latest_cycle?: Cycle
     metrics?: CycleMetrics
+    prediction?: CyclePrediction
     phase_guide?: PhaseGuide
     irregularity_analysis?: any
+    stats?: CycleStats
     disclaimer?: string
   }> {
     const res = await api.get('/api/cycles/current')
+    return res.data
+  },
+
+  async getPrediction(): Promise<CyclePrediction> {
+    const res = await api.get('/api/cycles/prediction')
+    return res.data
+  },
+
+  async getStats(): Promise<CycleStats> {
+    const res = await api.get('/api/cycles/stats')
     return res.data
   },
 
@@ -41,27 +63,47 @@ export const cycleService = {
 }
 
 export const moodService = {
-  async getAll() {
-    const res = await api.get('/api/moods')
+  async getAll(params?: { days?: number; start_date?: string; end_date?: string }): Promise<MoodLog[]> {
+    const query = new URLSearchParams()
+    if (params?.days) query.append('days', params.days.toString())
+    if (params?.start_date) query.append('start_date', params.start_date)
+    if (params?.end_date) query.append('end_date', params.end_date)
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    const res = await api.get(`/api/moods${qs}`)
     return res.data
   },
 
-  async getSummary() {
-    const res = await api.get('/api/moods/summary')
+  async getSummary(params?: { days?: number; start_date?: string; end_date?: string }): Promise<MoodSummary> {
+    const query = new URLSearchParams()
+    if (params?.days) query.append('days', params.days.toString())
+    if (params?.start_date) query.append('start_date', params.start_date)
+    if (params?.end_date) query.append('end_date', params.end_date)
+    const qs = query.toString() ? `?${query.toString()}` : ''
+    const res = await api.get(`/api/moods/summary${qs}`)
     return res.data
   },
 
-  async create(data: any) {
+  async create(data: {
+    date: string
+    mood: string
+    mood_score?: number
+    stress_level?: number
+    anxiety_level?: number
+    energy_level?: number
+    sleep_hours?: number
+    notes?: string
+    journal?: string
+  }): Promise<MoodLog> {
     const res = await api.post('/api/moods', data)
     return res.data
   },
 
-  async update(id: number, data: any) {
+  async update(id: number, data: Partial<MoodLog>): Promise<MoodLog> {
     const res = await api.put(`/api/moods/${id}`, data)
     return res.data
   },
 
-  async delete(id: number) {
+  async delete(id: number): Promise<void> {
     await api.delete(`/api/moods/${id}`)
   },
 }
@@ -146,17 +188,21 @@ export const reminderService = {
 }
 
 export const chatService = {
-  async sendMessage(question: string) {
-    const res = await api.post('/api/chat', { question })
+  async sendMessage(message: string, conversation_id?: number): Promise<ChatMessage> {
+    const res = await api.post('/api/chat', {
+      message,
+      question: message,
+      conversation_id,
+    })
     return res.data
   },
 
-  async getHistory() {
+  async getHistory(): Promise<ChatMessage[]> {
     const res = await api.get('/api/chat/history')
     return res.data
   },
 
-  async clearHistory() {
+  async clearHistory(): Promise<void> {
     await api.delete('/api/chat/history')
   },
 }
@@ -164,6 +210,11 @@ export const chatService = {
 export const analyticsService = {
   async getDashboard() {
     const res = await api.get('/api/analytics/dashboard')
+    return res.data
+  },
+
+  async getCorrelations(): Promise<CycleMoodCorrelation> {
+    const res = await api.get('/api/analytics/correlations')
     return res.data
   },
 

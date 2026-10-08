@@ -4,8 +4,8 @@ output "app_server_public_ip" {
 }
 
 output "rds_endpoint" {
-  description = "PostgreSQL RDS database connection endpoint"
-  value       = aws_db_instance.sync_postgres.endpoint
+  description = "MySQL RDS database connection endpoint"
+  value       = aws_db_instance.sync_mysql.endpoint
 }
 
 output "s3_reports_bucket_name" {

@@ -8,6 +8,10 @@ logger = logging.getLogger("sync.database")
 
 db_url = settings.DATABASE_URL
 
+# Normalize plain mysql:// scheme to mysql+pymysql:// for PyMySQL driver
+if db_url.startswith("mysql://"):
+    db_url = db_url.replace("mysql://", "mysql+pymysql://", 1)
+
 if db_url.startswith("sqlite"):
     engine = create_engine(
         db_url,
@@ -18,6 +22,7 @@ else:
         engine = create_engine(
             db_url,
             pool_pre_ping=True,
+            pool_recycle=3600,
             pool_size=10,
             max_overflow=20,
         )
@@ -26,7 +31,7 @@ else:
             pass
     except Exception as e:
         logger.warning(
-            f"Could not connect to PostgreSQL at {db_url} ({e}). Falling back to local SQLite database for zero-config local run."
+            f"Could not connect to MySQL database at {db_url} ({e}). Falling back to local SQLite database for zero-config local run."
         )
         fallback_url = "sqlite:///./sync_wellness.db"
         engine = create_engine(

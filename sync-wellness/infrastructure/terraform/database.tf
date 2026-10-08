@@ -1,6 +1,6 @@
 resource "aws_db_subnet_group" "sync_db_subnet_group" {
   name        = "sync-db-subnet-group"
-  description = "Database subnet group for SYNC PostgreSQL RDS"
+  description = "Database subnet group for SYNC MySQL RDS"
   subnet_ids  = [aws_subnet.private_db_1.id, aws_subnet.private_db_2.id]
 
   tags = {
@@ -10,12 +10,12 @@ resource "aws_db_subnet_group" "sync_db_subnet_group" {
 
 resource "aws_security_group" "rds_sg" {
   name        = "sync-rds-sg"
-  description = "Allow inbound PostgreSQL traffic from application EC2"
+  description = "Allow inbound MySQL traffic from application EC2"
   vpc_id      = aws_vpc.sync_vpc.id
 
   ingress {
-    from_port       = 5432
-    to_port         = 5432
+    from_port       = 3306
+    to_port         = 3306
     protocol        = "tcp"
     security_groups = [aws_security_group.app_sg.id]
   }
@@ -32,10 +32,10 @@ resource "aws_security_group" "rds_sg" {
   }
 }
 
-resource "aws_db_instance" "sync_postgres" {
-  identifier             = "sync-postgres-db"
-  engine                 = "postgres"
-  engine_version         = "15.7"
+resource "aws_db_instance" "sync_mysql" {
+  identifier             = "sync-mysql-db"
+  engine                 = "mysql"
+  engine_version         = "8.0"
   instance_class         = "db.t3.micro" # AWS Free Tier eligible (750 hours/month)
   allocated_storage      = 20            # AWS Free Tier maximum (20 GB)
   storage_type           = "gp2"         # AWS Free Tier General Purpose SSD
@@ -50,7 +50,7 @@ resource "aws_db_instance" "sync_postgres" {
   publicly_accessible    = false
 
   tags = {
-    Name = "sync-postgres-rds"
+    Name = "sync-mysql-rds"
   }
 }
 

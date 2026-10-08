@@ -32,13 +32,22 @@ class MoodLog(Base):
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     date = Column(Date, nullable=False)
     mood = Column(String(50), nullable=False)         # happy|calm|neutral|sad|anxious|irritated|tired|energetic
+    mood_score = Column(Integer, nullable=True)       # 1-10
     stress_level = Column(Integer, nullable=True)     # 1-10
+    anxiety_level = Column(Integer, nullable=True)    # 1-10
     energy_level = Column(Integer, nullable=True)     # 1-10
+    sleep_hours = Column(Float, nullable=True)        # hours of sleep (e.g. 7.5)
+    notes = Column(Text, nullable=True)
     journal = Column(Text, nullable=True)
     sentiment_score = Column(Float, nullable=True)    # -1 to 1
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
     user = relationship("User", back_populates="mood_logs")
+
+
+# Model alias for convenience
+MoodEntry = MoodLog
 
 
 class Symptom(Base):
@@ -103,6 +112,32 @@ class Reminder(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User", back_populates="reminders")
+
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    title = Column(String(255), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user = relationship("User", back_populates="conversations")
+    messages = relationship("ChatMessage", back_populates="conversation", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
+
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False, index=True)
+    role = Column(String(50), nullable=False)  # user | assistant
+    content = Column(Text, nullable=False)
+    sources = Column(Text, nullable=True)      # JSON string
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    conversation = relationship("Conversation", back_populates="messages")
 
 
 class ChatHistory(Base):

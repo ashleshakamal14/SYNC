@@ -1,15 +1,15 @@
 """
-Analytics API - aggregated data for charts and dashboards.
+Analytics API - aggregated data for charts, dashboards, and Cycle + Mood correlations.
 """
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import func, extract
-from typing import List, Dict
+from typing import List, Dict, Optional
 from datetime import date, timedelta
 from app.core.security import get_current_user
 from app.database.session import get_db
 from app.models.user import User
 from app.models.wellness import Cycle, MoodLog, Symptom, Nutrition, Reminder
+from app.ai.mood_engine import analyze_cycle_mood_correlation, MOOD_SCORE_BASE
 
 router = APIRouter(prefix="/api/analytics", tags=["Analytics"])
 
@@ -73,8 +73,10 @@ def get_dashboard_analytics(
         {
             "date": str(m.date),
             "mood": m.mood,
+            "mood_score": m.mood_score or MOOD_SCORE_BASE.get(m.mood.lower(), 5),
             "stress": m.stress_level,
             "energy": m.energy_level,
+            "sleep": m.sleep_hours,
             "sentiment": m.sentiment_score,
         }
         for m in recent_moods
@@ -107,6 +109,56 @@ def get_dashboard_analytics(
             for r in upcoming
         ],
     }
+
+
+@router.get("/correlations", response_model=dict)
+def get_cycle_mood_correlations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Phase 5 — Cycle + Mood correlation endpoint.
+    Identifies statistical trends (energy, stress, sleep, mood) across cycle phases
+    using supportive, non-medical language.
+    """
+    cycles = (
+        db.query(Cycle)
+        .filter(Cycle.user_id == current_user.id)
+        .order_by(Cycle.period_start.asc())
+        .all()
+    )
+
+    moods = (
+        db.query(MoodLog)
+        .filter(MoodLog.user_id == current_user.id)
+        .order_by(MoodLog.date.asc())
+        .all()
+    )
+
+    cycle_dicts = [
+        {
+            "period_start": c.period_start,
+            "period_end": c.period_end,
+            "cycle_length": c.cycle_length,
+            "period_length": c.period_length,
+        }
+        for c in cycles
+    ]
+
+    mood_dicts = [
+        {
+            "date": m.date,
+            "mood": m.mood,
+            "mood_score": m.mood_score or MOOD_SCORE_BASE.get(m.mood.lower(), 5),
+            "stress_level": m.stress_level,
+            "anxiety_level": m.anxiety_level,
+            "energy_level": m.energy_level,
+            "sleep_hours": m.sleep_hours,
+        }
+        for m in moods
+    ]
+
+    return analyze_cycle_mood_correlation(cycle_dicts, mood_dicts)
 
 
 @router.get("/cycles/history", response_model=dict)
@@ -157,8 +209,11 @@ def get_mood_trends(
             {
                 "date": str(l.date),
                 "mood": l.mood,
+                "mood_score": l.mood_score or MOOD_SCORE_BASE.get(l.mood.lower(), 5),
                 "stress": l.stress_level,
+                "anxiety": l.anxiety_level,
                 "energy": l.energy_level,
+                "sleep": l.sleep_hours,
                 "sentiment": l.sentiment_score,
             }
             for l in logs
