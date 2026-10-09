@@ -77,19 +77,13 @@ export default function ReportsPage() {
   }
 
   const handleDownload = async (id: number) => {
-    try {
-      const res = await reportService.download(id)
-      if (res.redirect_url) {
-        window.open(res.redirect_url, '_blank')
-      } else {
-        // Direct download URL
-        window.open(`/api/reports/${id}/download`, '_blank')
-      }
-    } catch (err) {
-      console.error('Failed to download report:', err)
-    }
+  try {
+    await reportService.download(id)
+  } catch (err) {
+    console.error('Failed to download report:', err)
+    alert('Failed to download report')
   }
-
+}
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this saved report?')) return
     try {

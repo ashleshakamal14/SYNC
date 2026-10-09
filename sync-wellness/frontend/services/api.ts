@@ -274,10 +274,20 @@ export const reportService = {
     return res.data
   },
 
-  async download(id: number) {
-    const res = await api.get(`/api/reports/${id}/download`)
-    return res.data
-  },
+ async download(id: number) {
+  const res = await api.get(`/api/reports/${id}/download`, {
+    responseType: 'blob',
+  })
+
+  const url = window.URL.createObjectURL(res.data)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `wellness_report_${id}.pdf`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  window.URL.revokeObjectURL(url)
+},
 
   async delete(id: number) {
     await api.delete(`/api/reports/${id}`)
